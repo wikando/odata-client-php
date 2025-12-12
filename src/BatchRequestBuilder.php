@@ -145,9 +145,9 @@ class BatchRequestBuilder
     /**
      * Execute the batch request
      * 
-     * @return IODataResponse
+     * @return ODataBatchResponse
      */
-    public function execute()
+    public function execute() : ODataBatchResponse
     {
         // End any open changeset
         if ($this->currentChangeset !== null) {
@@ -173,7 +173,7 @@ class BatchRequestBuilder
         // Restore original custom headers for future requests
         $this->client->setHeaders($originalHeaders);
 
-        return $response;
+        return $response[0];
     }
 
     /**
