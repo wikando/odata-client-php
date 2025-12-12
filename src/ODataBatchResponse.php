@@ -2,16 +2,27 @@
 
 namespace SaintSystems\OData;
 
+use SaintSystems\OData\Exception\ODataException;
+
 class ODataBatchResponse implements IODataResponse
 {
     private IODataRequest $request;
     private ?string $body;
+    /**
+     * @var array<string, string|array<int, string>>
+     */
     private array $headers;
     private ?string $httpStatusCode;
+    /**
+     * @var array<int, ODataResponse>
+     */
     private array $responses;
-    private ?string $boundary;
+    private string $boundary;
 
-    public function __construct(IODataRequest $request, ?string $body = null, ?string $httpStatusCode = null, array $headers = array())
+    /**
+     * @throws ODataException
+     */
+    public function __construct(IODataRequest $request, ?string $body = null, ?string $httpStatusCode = null, array $headers = [])
     {
         $this->request = $request;
         $this->body = $body;
@@ -21,17 +32,16 @@ class ODataBatchResponse implements IODataResponse
         $this->responses = $this->parseBatchResponse();
     }
 
-    private function extractBoundary(): ?string
+    /**
+     * @throws ODataException
+     */
+    private function extractBoundary(): string
     {
         $contentType = $this->getContentTypeHeader();
-        if ($contentType !== null && $contentType !== '' && preg_match('/boundary=(["\']?)([^"\';]+)\1/', $contentType, $matches)) {
-            $boundary = $matches[2];
-            
-            if (strpos(strtolower($boundary), 'batchresponse') !== false) {
-                return $boundary;
-            }
+        if ($contentType !== null && preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1$/', $contentType, $matches)) {
+            return $matches[2];
         }
-        return null;
+        throw new ODataException('No boundary found in batch response content-type header: ' . $contentType);
     }
 
     private function getContentTypeHeader(): ?string
@@ -46,146 +56,181 @@ class ODataBatchResponse implements IODataResponse
 
     private function parseBatchResponse(): array
     {
-        if ($this->body === null || $this->body === '' || $this->boundary === null || $this->boundary === '') {
-            return array();
+        if ($this->body === null || $this->body === '') {
+            return [];
         }
 
-        $responses = array();
+        $responses = [];
         $parts = explode('--' . $this->boundary, $this->body);
 
         foreach ($parts as $part) {
             $part = trim($part);
             // Skip empty parts and boundary end marker
-            if ($part === '' || $part === '--' || $part === "\r\n--" || trim($part, "\r\n-") === '') {
+            if ('' === trim($part, "\r\n-")) {
                 continue;
             }
 
-            if ($this->isChangesetPart($part)) {
-                $changesetResponses = $this->parseChangesetPart($part);
-                $responses = array_merge($responses, $changesetResponses);
+            $changesetBoundary = $this->extractChangesetBoundary($part);
+            if (null === $changesetBoundary) {
+                $responses[] = $this->parseIndividualResponse($part);
             } else {
-                $response = $this->parseIndividualResponse($part);
-                if ($response !== null) {
-                    $responses[] = $response;
-                }
+                $changesetResponses = $this->parseChangesetPart($part, $changesetBoundary);
+                $responses = array_merge($responses, $changesetResponses);
             }
         }
 
         return $responses;
     }
 
-    private function isChangesetPart(string $part): bool
+    private function extractChangesetBoundary(string $part): ?string
     {
-        return preg_match('/Content-Type:\s*multipart\/mixed;\s*boundary=["\']?[^"\'\s]*changeset[^"\'\s]*["\']?/i', $part) === 1;
+        if (preg_match('/^Content-Type:\s*multipart\/mixed;\s*boundary=["\']?([^"\'\s;]+)["\']?/i', $part, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 
-    private function parseChangesetPart(string $part): array
+    private function parseChangesetPart(string $part, string $changesetBoundary): array
     {
-        if (preg_match('/boundary=(["\']?)([^"\'\r\n;]+)\1/i', $part, $matches) !== 1) {
-            return array();
-        }
-        
-        $changesetBoundary = $matches[2];
-        
-        if ($changesetBoundary === '' || strpos(strtolower($changesetBoundary), 'changeset') === false) {
-            return array();
-        }
-        
         // Find where changeset content starts (after empty line)
         $changesetContent = $this->extractChangesetContent($part);
-        
+
         // Parse individual responses within changeset
         $changesetParts = explode('--' . $changesetBoundary, $changesetContent);
-        $responses = array();
-        
+        $responses = [];
+
         foreach ($changesetParts as $changesetPart) {
             $changesetPart = trim($changesetPart);
-            if ($changesetPart === '' || $changesetPart === '--' || trim($changesetPart, "\r\n-") === '') {
+            if ('' === trim($changesetPart, "\r\n-")) {
                 continue;
             }
-            
+
             $response = $this->parseIndividualResponse($changesetPart);
             if ($response !== null) {
                 $responses[] = $response;
             }
         }
-        
+
         return $responses;
     }
 
     private function extractChangesetContent(string $part): string
     {
-        $lines = explode("\n", $part);
-        $contentStarted = false;
-        $content = array();
-        
+        $separator = $this->detectHeaderSeparator($part);
+
+        $changesetParts = explode($separator, $part, 2);
+
+        return $changesetParts[1];
+    }
+
+    /**
+     * @throws ODataException
+     */
+    private function detectHeaderSeparator(string $part): string
+    {
+        if (strpos($part, "\r\n\r\n") !== false) {
+            return "\r\n\r\n";
+        }
+        if (strpos($part, "\n\n") !== false) {
+            return "\n\n";
+        }
+        throw new ODataException('No header/body separator found in changeset part: ' . $part);
+    }
+
+    private function parseIndividualResponse(string $part): ODataResponse
+    {
+        $separator = $this->detectHeaderSeparator($part);
+
+        $responseParts = explode($separator, $part, 3);
+
+        if (count($responseParts) < 2) {
+            throw new ODataException('Unexpected header format in response part: ' . $part);
+        }
+
+        $responseHeaders = $responseParts[0];
+        $httpHeaders = $responseParts[1];
+        $responseBody = $responseParts[2] ?? '';
+
+        $responseHeadersResult = $this->parseHttpHeaders($responseHeaders);
+
+        $httpHeadersResult = $this->parseHttpHeaders($httpHeaders);
+        $responseHeaders = $httpHeadersResult['headers'];
+        $statusCode = $httpHeadersResult['statusCode'];
+
+        if (null === $statusCode) {
+            throw new ODataException('No http status code found in response part: ' . $part);
+        }
+
+        if (array_key_exists('Content-ID', $responseHeadersResult['headers'])) {
+            $responseHeaders['Content-ID'] = $responseHeadersResult['headers']['Content-ID'];
+        }
+
+        return new ODataResponse($this->request, $responseBody, (string)$statusCode, $responseHeaders);
+    }
+
+    /**
+     * Parse HTTP headers with support for multi-line headers (header folding)
+     *
+     * @param string $headerString Raw HTTP header block
+     * @return array{statusCode: int|null, statusText: string, headers: array<string, string|array<int, string>>} Parsed headers with status code, status text, and header key-value pairs
+     */
+    private function parseHttpHeaders(string $headerString): array
+    {
+        // Unfold headers: replace CRLF followed by whitespace with a single space
+        $headerString = preg_replace('/\r?\n[ \t]+/', ' ', $headerString);
+
+        $lines = explode("\n", $headerString);
+        $result = [
+            'statusCode' => null,
+            'statusText' => '',
+            'headers' => []
+        ];
+
         foreach ($lines as $line) {
             $line = rtrim($line, "\r");
-            
-            // Skip until we find an empty line (end of changeset headers)
-            if (!$contentStarted) {
-                if (trim($line) === '') {
-                    $contentStarted = true;
-                }
+
+            // Skip empty lines
+            if (trim($line) === '') {
                 continue;
             }
-            
-            $content[] = $line;
-        }
-        
-        return implode("\n", $content);
-    }
 
-    private function parseIndividualResponse(string $part): ?ODataResponse
-    {
-        $lines = explode("\n", $part);
-        $inHeaders = true;
-        $responseHeaders = array();
-        $responseBody = '';
-        $statusCode = null;
-        $foundHttpResponse = false;
+            // Parse status line (e.g., "HTTP/1.1 412 Precondition Failed")
+            if (preg_match('/^HTTP\/\d\.\d\s+(\d{3})(\s+(.*))?$/', $line, $matches)) {
+                $result['statusCode'] = (int)$matches[1];
+                $result['statusText'] = trim($matches[3] ?? '');
+                continue;
+            }
 
-        foreach ($lines as $line) {
-            $line = rtrim($line, "\r");
-            
-            if ($inHeaders) {
-                if (trim($line) === '') {
-                    // Only switch to body parsing if we've found an HTTP response line
-                    if ($foundHttpResponse) {
-                        $inHeaders = false;
+            // Parse header line
+            if (strpos($line, ':') !== false) {
+                [$name, $value] = explode(':', $line, 2);
+                $name = trim($name);
+                $value = trim($value);
+
+                // Store multiple headers with same name as array
+                if (array_key_exists($name, $result['headers'])) {
+                    if (!is_array($result['headers'][$name])) {
+                        $result['headers'][$name] = [$result['headers'][$name]];
                     }
-                    continue;
+                    $result['headers'][$name][] = $value;
+                } else {
+                    $result['headers'][$name] = $value;
                 }
-                
-                if (strpos($line, 'HTTP/') === 0) {
-                    $statusParts = explode(' ', $line, 3);
-                    $statusCode = (array_key_exists(1, $statusParts) && $statusParts[1] !== null) ? $statusParts[1] : (string)HttpStatusCode::OK;
-                    $foundHttpResponse = true;
-                    continue;
-                }
-                
-                // Only parse headers after we've found the HTTP response line
-                if ($foundHttpResponse && strpos($line, ':') !== false) {
-                    list($key, $value) = explode(':', $line, 2);
-                    $responseHeaders[trim($key)] = trim($value);
-                }
-            } else {
-                $responseBody .= $line . "\n";
             }
         }
 
-        $responseBody = trim($responseBody);
-        
-        if ($statusCode !== null) {
-            return new ODataResponse($this->request, $responseBody, $statusCode, $responseHeaders);
-        }
-        
-        return null;
+        return $result;
     }
 
+    /**
+     * Get the decoded bodies of all responses in the batch
+     *
+     * @return array<int, array> Array of decoded response bodies, where each element is the JSON-decoded body
+     *                           of an individual response in the batch. Returns empty array if no responses.
+     */
     public function getBody(): array
     {
-        $bodies = array();
+        $bodies = [];
         foreach ($this->responses as $response) {
             $bodies[] = $response->getBody();
         }
@@ -214,6 +259,6 @@ class ODataBatchResponse implements IODataResponse
 
     public function getResponse(int $index): ?ODataResponse
     {
-        return (array_key_exists($index, $this->responses) && $this->responses[$index] !== null) ? $this->responses[$index] : null;
+        return $this->responses[$index] ?? null;
     }
 }

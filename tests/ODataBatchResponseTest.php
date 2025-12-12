@@ -3,6 +3,7 @@
 namespace SaintSystems\OData\Tests;
 
 use PHPUnit\Framework\TestCase;
+use SaintSystems\OData\Exception\ODataException;
 use SaintSystems\OData\ODataBatchResponse;
 use SaintSystems\OData\ODataResponse;
 use SaintSystems\OData\IODataRequest;
@@ -10,10 +11,10 @@ use SaintSystems\OData\IODataRequest;
 class ODataBatchResponseTest extends TestCase
 {
 
-    public function testBatchResponseExample()
+    public function testBatchResponseExample(): void
     {
         $boundary = 'batchresponse_01346794-f2e2-4d45-8cc2-f97e09fe8916';
-        
+
         $body = <<<EOD
 --$boundary
 Content-Type: application/http
@@ -64,33 +65,33 @@ EOD;
             'Content-Type' => "multipart/mixed; boundary=$boundary",
             'OData-Version' => '4.0'
         ];
-        
+
         $request = $this->createMock(IODataRequest::class);
         $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
-        
+
         $responses = $batchResponse->getResponses();
         $this->assertCount(3, $responses);
-        
+
         // Verify status codes
         $this->assertSame('204', $responses[0]->getStatus());
         $this->assertSame('204', $responses[1]->getStatus());
         $this->assertSame('200', $responses[2]->getStatus());
-        
+
         // Verify response headers
         $headers1 = $responses[0]->getHeaders();
         $this->assertSame('4.0', $headers1['OData-Version']);
         $this->assertSame('[Organization Uri]/api/data/v9.2/tasks(00aa00aa-bb11-cc22-dd33-44ee44ee44ee)', $headers1['Location']);
         $this->assertSame('[Organization Uri]/api/data/v9.2/tasks(00aa00aa-bb11-cc22-dd33-44ee44ee44ee)', $headers1['OData-EntityId']);
-        
+
         $headers2 = $responses[1]->getHeaders();
         $this->assertSame('4.0', $headers2['OData-Version']);
         $this->assertSame('[Organization Uri]/api/data/v9.2/tasks(11bb11bb-cc22-dd33-ee44-55ff55ff55ff)', $headers2['Location']);
         $this->assertSame('[Organization Uri]/api/data/v9.2/tasks(11bb11bb-cc22-dd33-ee44-55ff55ff55ff)', $headers2['OData-EntityId']);
-        
+
         $headers3 = $responses[2]->getHeaders();
         $this->assertSame('application/json; odata.metadata=minimal; odata.streaming=true', $headers3['Content-Type']);
         $this->assertSame('4.0', $headers3['OData-Version']);
-        
+
         // Verify raw body content
         $expectedJson = <<<'JSON'
 {
@@ -110,7 +111,7 @@ EOD;
 }
 JSON;
         $this->assertSame($expectedJson, $responses[2]->getRawBody());
-        
+
         // Verify expected structure
         $jsonResponse = $responses[2];
         $body = $jsonResponse->getBody();
@@ -118,11 +119,11 @@ JSON;
         $this->assertSame('Task 2 in batch', $body['value'][1]['subject']);
     }
 
-    public function testChangesetBatchResponse()
+    public function testChangesetBatchResponse(): void
     {
         $boundary = 'batchresponse_f27ef42d-51b0-4685-bac9-f468f844de2f';
         $changesetBoundary = 'changesetresponse_5c9b9207-0a2e-4a4f-9b7a-8b8b8b8b8b8b';
-        
+
         $body = <<<EOD
 --$boundary
 Content-Type: multipart/mixed; boundary=$changesetBoundary
@@ -156,28 +157,28 @@ EOD;
             'Content-Type' => "multipart/mixed; boundary=$boundary",
             'OData-Version' => '4.0'
         ];
-        
+
         $request = $this->createMock(IODataRequest::class);
         $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
-        
+
         $responses = $batchResponse->getResponses();
-        
+
         $this->assertCount(2, $responses);
-        
+
         $response1 = $responses[0];
         $this->assertInstanceOf(ODataResponse::class, $response1);
         $this->assertSame('204', $response1->getStatus());
-        
+
         $headers1 = $response1->getHeaders();
         $this->assertSame('4.0', $headers1['OData-Version']);
         $this->assertSame('[Organization URI]/api/data/v9.2/accounts(55ff55ff-aa66-bb77-cc88-99dd99dd99dd)', $headers1['Location']);
         $this->assertSame('[Organization URI]/api/data/v9.2/accounts(55ff55ff-aa66-bb77-cc88-99dd99dd99dd)', $headers1['OData-EntityId']);
         $this->assertSame('', $response1->getRawBody());
-        
+
         $response2 = $responses[1];
         $this->assertInstanceOf(ODataResponse::class, $response2);
         $this->assertSame('204', $response2->getStatus());
-        
+
         $headers2 = $response2->getHeaders();
         $this->assertSame('4.0', $headers2['OData-Version']);
         $this->assertSame('[Organization URI]/api/data/v9.2/contacts(66aa66aa-bb77-cc88-dd99-00ee00ee00ee)', $headers2['Location']);
@@ -185,10 +186,10 @@ EOD;
         $this->assertSame('', $response2->getRawBody());
     }
 
-    public function testBatchResponseWithMixedSuccessAndFailure()
+    public function testBatchResponseWithMixedSuccessAndFailure(): void
     {
         $boundary = 'batchresponse_a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-        
+
         $body = <<<EOD
 --$boundary
 Content-Type: application/http
@@ -255,19 +256,19 @@ EOD;
             'OData-Version' => '4.0',
             'Prefer' => 'odata.continue-on-error'
         ];
-        
+
         $request = $this->createMock(IODataRequest::class);
         $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
-        
+
         $responses = $batchResponse->getResponses();
         $this->assertCount(4, $responses);
-        
+
         // Verify status codes
         $this->assertSame('400', $responses[0]->getStatus());
         $this->assertSame('204', $responses[1]->getStatus());
         $this->assertSame('204', $responses[2]->getStatus());
         $this->assertSame('404', $responses[3]->getStatus());
-        
+
         // Verify headers
         $errorHeaders1 = $responses[0]->getHeaders();
         $this->assertSame('application/json; odata.metadata=minimal', $errorHeaders1['Content-Type']);
@@ -302,7 +303,7 @@ EOD;
 }
 JSON;
         $this->assertSame($expectedError1, $responses[0]->getRawBody());
-        
+
         $expectedError2 = <<<'JSON'
 {
   "error": {
@@ -322,8 +323,377 @@ JSON;
         $errorResponse2 = $responses[3]->getBody();
         $this->assertSame('0x80040237', $errorResponse1['error']['code']);
         $this->assertSame('0x80040217', $errorResponse2['error']['code']);
-        
+
         // Test that batch overall status is still 200 OK (continue-on-error)
         $this->assertSame('200', $batchResponse->getStatus());
+    }
+
+    public function testEmptyBodyReturnsEmptyResponses(): void
+    {
+        $headers = ['Content-Type' => 'multipart/mixed; boundary=test'];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, '', '200', $headers);
+
+        $this->assertSame([], $batchResponse->getResponses());
+        $this->assertSame([], $batchResponse->getBody());
+    }
+
+    public function testNullBodyReturnsEmptyResponses(): void
+    {
+        $headers = ['Content-Type' => 'multipart/mixed; boundary=test'];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, null, '200', $headers);
+
+        $this->assertSame([], $batchResponse->getResponses());
+        $this->assertSame([], $batchResponse->getBody());
+    }
+
+    public function testMissingBoundaryThrowsException(): void
+    {
+        $this->expectException(ODataException::class);
+        $this->expectExceptionMessage('No boundary found in batch response content-type header');
+
+        $headers = ['Content-Type' => 'application/json'];
+        $request = $this->createMock(IODataRequest::class);
+
+        new ODataBatchResponse($request, 'body', '200', $headers);
+    }
+
+    public function testMissingContentTypeThrowsException(): void
+    {
+        $this->expectException(ODataException::class);
+        $this->expectExceptionMessage('No boundary found in batch response content-type header');
+
+        $headers = [];
+        $request = $this->createMock(IODataRequest::class);
+
+        new ODataBatchResponse($request, 'body', '200', $headers);
+    }
+
+    public function testContentTypeAsArrayIsHandled(): void
+    {
+        $boundary = 'test-boundary-array';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"test": "data"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => ["multipart/mixed; boundary=$boundary", 'other']];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $this->assertCount(1, $batchResponse->getResponses());
+    }
+
+    public function testLinuxLineEndingsAreSupported(): void
+    {
+        $boundary = 'batch_unix';
+        $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\nContent-Type: Content-Type: application/json\n\n[]\n--$boundary--";
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(1, $responses);
+        $this->assertSame('200', $responses[0]->getStatus());
+    }
+
+    public function testNoHeaderSeparatorThrowsException(): void
+    {
+        $this->expectException(ODataException::class);
+        $this->expectExceptionMessage('No header/body separator found in changeset part');
+
+        $boundary = 'bad-boundary';
+        $body = "--$boundary\nContent-Type: application/http\nHTTP/1.1 200 OK\n--$boundary--";
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        new ODataBatchResponse($request, $body, '200', $headers);
+    }
+
+    public function testMissingStatusCodeThrowsException(): void
+    {
+        $this->expectException(ODataException::class);
+        $this->expectExceptionMessage('No http status code found in response part');
+
+        $boundary = 'bad-format';
+        // Has proper separators but missing HTTP status line in second section
+        $body = "--$boundary\nContent-Type: application/http\n\nContent-Type: application/json\n\n{\"test\": \"data\"}\n--$boundary--";
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        new ODataBatchResponse($request, $body, '200', $headers);
+    }
+
+    public function testMultiLineHeadersAreParsedCorrectly(): void
+    {
+        $boundary = 'multiline-test';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json;
+ odata.metadata=minimal;
+ charset=utf-8
+X-Custom: value
+
+{"test": "data"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(1, $responses);
+        $responseHeaders = $responses[0]->getHeaders();
+        $this->assertSame('application/json; odata.metadata=minimal; charset=utf-8', $responseHeaders['Content-Type']);
+    }
+
+    public function testMultipleHeadersWithSameNameAreHandled(): void
+    {
+        $boundary = 'duplicate-headers';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Set-Cookie: session=abc123
+Set-Cookie: token=xyz789
+Content-Type: application/json
+
+{"test": "data"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(1, $responses);
+        $responseHeaders = $responses[0]->getHeaders();
+        $this->assertIsArray($responseHeaders['Set-Cookie']);
+        $this->assertSame(['session=abc123', 'token=xyz789'], $responseHeaders['Set-Cookie']);
+    }
+
+    public function testStatusLineWithoutStatusTextIsHandled(): void
+    {
+        $boundary = 'no-status-text';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200
+Content-Type: application/json
+
+{"test": "data"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(1, $responses);
+        $this->assertSame('200', $responses[0]->getStatus());
+    }
+
+    public function testGetResponseReturnsNullForInvalidIndex(): void
+    {
+        $boundary = 'test-boundary';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"test": "data"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+
+        $this->assertNull($batchResponse->getResponse(999));
+        $this->assertNull($batchResponse->getResponse(-1));
+    }
+
+    public function testGetResponseReturnsCorrectResponse(): void
+    {
+        $boundary = 'test-boundary';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"id": 1}
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{"id": 2}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+
+        $response0 = $batchResponse->getResponse(0);
+        $response1 = $batchResponse->getResponse(1);
+
+        $this->assertNotNull($response0);
+        $this->assertNotNull($response1);
+        $this->assertSame('200', $response0->getStatus());
+        $this->assertSame('201', $response1->getStatus());
+    }
+
+    public function testGetHeadersReturnsBatchHeaders(): void
+    {
+        $boundary = 'test-boundary';
+        $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
+        $headers = [
+            'Content-Type' => "multipart/mixed; boundary=$boundary",
+            'OData-Version' => '4.0',
+            'Custom-Header' => 'custom-value'
+        ];
+
+        $request = $this->createMock(IODataRequest::class);
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+
+        $returnedHeaders = $batchResponse->getHeaders();
+        $this->assertSame($headers, $returnedHeaders);
+        $this->assertSame('4.0', $returnedHeaders['OData-Version']);
+        $this->assertSame('custom-value', $returnedHeaders['Custom-Header']);
+    }
+
+    public function testGetRawBodyReturnsOriginalBody(): void
+    {
+        $boundary = 'test-boundary';
+        $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+
+        $request = $this->createMock(IODataRequest::class);
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+
+        $this->assertSame($body, $batchResponse->getRawBody());
+    }
+
+    public function testErrorStatusCodesAreParsedCorrectly(): void
+    {
+        $boundary = 'error-test';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 412 Precondition Failed
+REQ_ID: 298375c3-8565-40ba-87a4-e8b762a5c39b
+X-Content-Type-Options: nosniff
+Content-Type: application/json; odata.metadata=minimal
+OData-Version: 4.0
+
+{"error": "precondition failed"}
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(1, $responses);
+        $this->assertSame('412', $responses[0]->getStatus());
+
+        $responseHeaders = $responses[0]->getHeaders();
+        $this->assertSame('298375c3-8565-40ba-87a4-e8b762a5c39b', $responseHeaders['REQ_ID']);
+        $this->assertSame('nosniff', $responseHeaders['X-Content-Type-Options']);
+        $this->assertSame('application/json; odata.metadata=minimal', $responseHeaders['Content-Type']);
+        $this->assertSame('4.0', $responseHeaders['OData-Version']);
+    }
+
+    public function testContentIDHeaderIsPreservedInChangesets(): void
+    {
+        $boundary = 'batch-boundary';
+        $changesetBoundary = 'changeset-boundary';
+
+        $body = <<<EOD
+--$boundary
+Content-Type: multipart/mixed; boundary=$changesetBoundary
+
+--$changesetBoundary
+Content-Type: application/http
+Content-ID: 1
+
+HTTP/1.1 201 Created
+Location: https://example.com/entity(1)
+
+--$changesetBoundary
+Content-Type: application/http
+Content-ID: 2
+
+HTTP/1.1 201 Created
+Location: https://example.com/entity(2)
+
+--$changesetBoundary--
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $responses = $batchResponse->getResponses();
+
+        $this->assertCount(2, $responses);
+        $this->assertSame('1', $responses[0]->getHeaders()['Content-ID']);
+        $this->assertSame('2', $responses[1]->getHeaders()['Content-ID']);
+    }
+
+    public function testQuotedBoundaryIsHandled(): void
+    {
+        $boundary = 'quoted-boundary-123';
+        $body = <<<EOD
+--$boundary
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+
+[]
+--$boundary--
+EOD;
+
+        $headers = ['Content-Type' => "multipart/mixed; boundary=\"$boundary\""];
+        $request = $this->createMock(IODataRequest::class);
+
+        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $this->assertCount(1, $batchResponse->getResponses());
     }
 }
