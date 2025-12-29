@@ -16,11 +16,11 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => 'application/json'];
         $body = '{"test": "data"}';
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataResponse::class, $response);
         $this->assertNotInstanceOf(ODataBatchResponse::class, $response);
-        $this->assertSame('200', $response->getStatus());
+        $this->assertSame(200, $response->getStatus());
     }
 
     public function testCreateReturnsBatchResponseForMultipartMixedContent(): void
@@ -30,7 +30,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -42,7 +42,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => "multipart/mixed; boundary=\"$boundary\""];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -54,7 +54,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => "multipart/mixed; boundary='$boundary'"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -65,7 +65,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['test' => 'header'];
         $body = '{"test": "data"}';
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataResponse::class, $response);
         $this->assertNotInstanceOf(ODataBatchResponse::class, $response);
@@ -78,7 +78,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => ["multipart/mixed; boundary=$boundary", 'charset=utf-8']];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -89,7 +89,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => ['application/json', 'charset=utf-8']];
         $body = '{"test": "data"}';
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataResponse::class, $response);
         $this->assertNotInstanceOf(ODataBatchResponse::class, $response);
@@ -102,7 +102,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['content-type' => "multipart/mixed; boundary=$boundary"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -114,20 +114,9 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-TYPE' => "multipart/mixed; boundary=$boundary"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
-    }
-
-    public function testCreateWithNullBody(): void
-    {
-        $request = $this->createMock(IODataRequest::class);
-        $headers = ['Content-Type' => 'application/json'];
-
-        $response = ODataResponseFactory::create($request, null, '204', $headers);
-
-        $this->assertInstanceOf(ODataResponse::class, $response);
-        $this->assertSame('204', $response->getStatus());
     }
 
     public function testCreateWithEmptyBody(): void
@@ -135,10 +124,10 @@ class ODataResponseFactoryTest extends TestCase
         $request = $this->createMock(IODataRequest::class);
         $headers = ['Content-Type' => 'application/json'];
 
-        $response = ODataResponseFactory::create($request, '', '200', $headers);
+        $response = ODataResponseFactory::create($request, '', 200, $headers);
 
         $this->assertInstanceOf(ODataResponse::class, $response);
-        $this->assertSame('200', $response->getStatus());
+        $this->assertSame(200, $response->getStatus());
     }
 
     public function testCreateWithMultipleHeadersIncludingBatchContentType(): void
@@ -153,7 +142,7 @@ class ODataResponseFactoryTest extends TestCase
         ];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
         $this->assertSame($headers, $response->getHeaders());
@@ -166,7 +155,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -179,7 +168,7 @@ class ODataResponseFactoryTest extends TestCase
         $headers = ['Content-Type' => "multipart/mixed;  boundary=$boundary"];
         $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\n\n[]\n--$boundary--";
 
-        $response = ODataResponseFactory::create($request, $body, '200', $headers);
+        $response = ODataResponseFactory::create($request, $body, 200, $headers);
 
         $this->assertInstanceOf(ODataBatchResponse::class, $response);
     }
@@ -189,7 +178,7 @@ class ODataResponseFactoryTest extends TestCase
         $request = $this->createMock(IODataRequest::class);
         $headers = ['Content-Type' => 'application/json; charset=utf-8', 'X-Custom' => 'value'];
         $body = '{"id": 123, "name": "test"}';
-        $statusCode = '201';
+        $statusCode = 201;
 
         $response = ODataResponseFactory::create($request, $body, $statusCode, $headers);
 

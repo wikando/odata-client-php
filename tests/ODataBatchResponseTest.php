@@ -67,15 +67,15 @@ EOD;
         ];
 
         $request = $this->createMock(IODataRequest::class);
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $responses = $batchResponse->getResponses();
         $this->assertCount(3, $responses);
 
         // Verify status codes
-        $this->assertSame('204', $responses[0]->getStatus());
-        $this->assertSame('204', $responses[1]->getStatus());
-        $this->assertSame('200', $responses[2]->getStatus());
+        $this->assertSame(204, $responses[0]->getStatus());
+        $this->assertSame(204, $responses[1]->getStatus());
+        $this->assertSame(200, $responses[2]->getStatus());
 
         // Verify response headers
         $headers1 = $responses[0]->getHeaders();
@@ -159,7 +159,7 @@ EOD;
         ];
 
         $request = $this->createMock(IODataRequest::class);
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $responses = $batchResponse->getResponses();
 
@@ -167,7 +167,7 @@ EOD;
 
         $response1 = $responses[0];
         $this->assertInstanceOf(ODataResponse::class, $response1);
-        $this->assertSame('204', $response1->getStatus());
+        $this->assertSame(204, $response1->getStatus());
 
         $headers1 = $response1->getHeaders();
         $this->assertSame('4.0', $headers1['OData-Version']);
@@ -177,7 +177,7 @@ EOD;
 
         $response2 = $responses[1];
         $this->assertInstanceOf(ODataResponse::class, $response2);
-        $this->assertSame('204', $response2->getStatus());
+        $this->assertSame(204, $response2->getStatus());
 
         $headers2 = $response2->getHeaders();
         $this->assertSame('4.0', $headers2['OData-Version']);
@@ -258,16 +258,16 @@ EOD;
         ];
 
         $request = $this->createMock(IODataRequest::class);
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $responses = $batchResponse->getResponses();
         $this->assertCount(4, $responses);
 
         // Verify status codes
-        $this->assertSame('400', $responses[0]->getStatus());
-        $this->assertSame('204', $responses[1]->getStatus());
-        $this->assertSame('204', $responses[2]->getStatus());
-        $this->assertSame('404', $responses[3]->getStatus());
+        $this->assertSame(400, $responses[0]->getStatus());
+        $this->assertSame(204, $responses[1]->getStatus());
+        $this->assertSame(204, $responses[2]->getStatus());
+        $this->assertSame(404, $responses[3]->getStatus());
 
         // Verify headers
         $errorHeaders1 = $responses[0]->getHeaders();
@@ -325,7 +325,7 @@ JSON;
         $this->assertSame('0x80040217', $errorResponse2['error']['code']);
 
         // Test that batch overall status is still 200 OK (continue-on-error)
-        $this->assertSame('200', $batchResponse->getStatus());
+        $this->assertSame(200, $batchResponse->getStatus());
     }
 
     public function testEmptyBodyReturnsEmptyResponses(): void
@@ -333,18 +333,7 @@ JSON;
         $headers = ['Content-Type' => 'multipart/mixed; boundary=test'];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, '', '200', $headers);
-
-        $this->assertSame([], $batchResponse->getResponses());
-        $this->assertSame([], $batchResponse->getBody());
-    }
-
-    public function testNullBodyReturnsEmptyResponses(): void
-    {
-        $headers = ['Content-Type' => 'multipart/mixed; boundary=test'];
-        $request = $this->createMock(IODataRequest::class);
-
-        $batchResponse = new ODataBatchResponse($request, null, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, '', 200, $headers);
 
         $this->assertSame([], $batchResponse->getResponses());
         $this->assertSame([], $batchResponse->getBody());
@@ -358,7 +347,7 @@ JSON;
         $headers = ['Content-Type' => 'application/json'];
         $request = $this->createMock(IODataRequest::class);
 
-        new ODataBatchResponse($request, 'body', '200', $headers);
+        new ODataBatchResponse($request, 'body', 200, $headers);
     }
 
     public function testMissingContentTypeThrowsException(): void
@@ -369,7 +358,7 @@ JSON;
         $headers = [];
         $request = $this->createMock(IODataRequest::class);
 
-        new ODataBatchResponse($request, 'body', '200', $headers);
+        new ODataBatchResponse($request, 'body', 200, $headers);
     }
 
     public function testContentTypeAsArrayIsHandled(): void
@@ -389,7 +378,7 @@ EOD;
         $headers = ['Content-Type' => ["multipart/mixed; boundary=$boundary", 'other']];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $this->assertCount(1, $batchResponse->getResponses());
     }
 
@@ -401,11 +390,11 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(1, $responses);
-        $this->assertSame('200', $responses[0]->getStatus());
+        $this->assertSame(200, $responses[0]->getStatus());
     }
 
     public function testNoHeaderSeparatorThrowsException(): void
@@ -419,7 +408,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        new ODataBatchResponse($request, $body, '200', $headers);
+        new ODataBatchResponse($request, $body, 200, $headers);
     }
 
     public function testMissingStatusCodeThrowsException(): void
@@ -434,7 +423,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        new ODataBatchResponse($request, $body, '200', $headers);
+        new ODataBatchResponse($request, $body, 200, $headers);
     }
 
     public function testMultiLineHeadersAreParsedCorrectly(): void
@@ -457,7 +446,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(1, $responses);
@@ -484,7 +473,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(1, $responses);
@@ -510,11 +499,11 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(1, $responses);
-        $this->assertSame('200', $responses[0]->getStatus());
+        $this->assertSame(200, $responses[0]->getStatus());
     }
 
     public function testGetResponseReturnsNullForInvalidIndex(): void
@@ -534,7 +523,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $this->assertNull($batchResponse->getResponse(999));
         $this->assertNull($batchResponse->getResponse(-1));
@@ -564,15 +553,15 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $response0 = $batchResponse->getResponse(0);
         $response1 = $batchResponse->getResponse(1);
 
         $this->assertNotNull($response0);
         $this->assertNotNull($response1);
-        $this->assertSame('200', $response0->getStatus());
-        $this->assertSame('201', $response1->getStatus());
+        $this->assertSame(200, $response0->getStatus());
+        $this->assertSame(201, $response1->getStatus());
     }
 
     public function testGetHeadersReturnsBatchHeaders(): void
@@ -586,7 +575,7 @@ EOD;
         ];
 
         $request = $this->createMock(IODataRequest::class);
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $returnedHeaders = $batchResponse->getHeaders();
         $this->assertSame($headers, $returnedHeaders);
@@ -601,7 +590,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
 
         $request = $this->createMock(IODataRequest::class);
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
 
         $this->assertSame($body, $batchResponse->getRawBody());
     }
@@ -626,11 +615,11 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(1, $responses);
-        $this->assertSame('412', $responses[0]->getStatus());
+        $this->assertSame(412, $responses[0]->getStatus());
 
         $responseHeaders = $responses[0]->getHeaders();
         $this->assertSame('298375c3-8565-40ba-87a4-e8b762a5c39b', $responseHeaders['REQ_ID']);
@@ -669,7 +658,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $responses = $batchResponse->getResponses();
 
         $this->assertCount(2, $responses);
@@ -693,7 +682,7 @@ EOD;
         $headers = ['Content-Type' => "multipart/mixed; boundary=\"$boundary\""];
         $request = $this->createMock(IODataRequest::class);
 
-        $batchResponse = new ODataBatchResponse($request, $body, '200', $headers);
+        $batchResponse = new ODataBatchResponse($request, $body, 200, $headers);
         $this->assertCount(1, $batchResponse->getResponses());
     }
 }

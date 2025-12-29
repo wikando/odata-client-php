@@ -12,7 +12,7 @@ class ODataBatchResponse implements IODataResponse
      * @var array<string, string|array<int, string>>
      */
     private array $headers;
-    private ?string $httpStatusCode;
+    private int $httpStatusCode;
     /**
      * @var array<int, ODataResponse>
      */
@@ -22,7 +22,7 @@ class ODataBatchResponse implements IODataResponse
     /**
      * @throws ODataException
      */
-    public function __construct(IODataRequest $request, ?string $body = null, ?string $httpStatusCode = null, array $headers = [])
+    public function __construct(IODataRequest $request, string $body, int $httpStatusCode, array $headers = [])
     {
         $this->request = $request;
         $this->body = $body;
@@ -66,7 +66,7 @@ class ODataBatchResponse implements IODataResponse
         foreach ($parts as $part) {
             $part = trim($part);
             // Skip empty parts and boundary end marker
-            if ('' === trim($part, "\r\n-")) {
+            if ('' === $part || '--' === $part) {
                 continue;
             }
 
@@ -75,7 +75,7 @@ class ODataBatchResponse implements IODataResponse
                 $responses[] = $this->parseIndividualResponse($part);
             } else {
                 $changesetResponses = $this->parseChangesetPart($part, $changesetBoundary);
-                $responses = array_merge($responses, $changesetResponses);
+                array_push($responses, ...$changesetResponses);
             }
         }
 
@@ -101,7 +101,7 @@ class ODataBatchResponse implements IODataResponse
 
         foreach ($changesetParts as $changesetPart) {
             $changesetPart = trim($changesetPart);
-            if ('' === trim($changesetPart, "\r\n-")) {
+            if ('' === $changesetPart || '--' === $changesetPart) {
                 continue;
             }
 
@@ -165,7 +165,7 @@ class ODataBatchResponse implements IODataResponse
             $responseHeaders['Content-ID'] = $responseHeadersResult['headers']['Content-ID'];
         }
 
-        return new ODataResponse($this->request, $responseBody, (string)$statusCode, $responseHeaders);
+        return new ODataResponse($this->request, $responseBody, $statusCode, $responseHeaders);
     }
 
     /**
@@ -186,18 +186,18 @@ class ODataBatchResponse implements IODataResponse
             'headers' => []
         ];
 
-        foreach ($lines as $line) {
+        foreach ($lines as $index => $line) {
             $line = rtrim($line, "\r");
 
-            // Skip empty lines
-            if (trim($line) === '') {
+            // Try to parse first line as status line (e.g., "HTTP/1.1 412 Precondition Failed")
+            if (0 === $index && preg_match('/^HTTP\/\d\.\d\s+(\d{3})(\s+(.*))?$/', $line, $matches)) {
+                $result['statusCode'] = (int)$matches[1];
+                $result['statusText'] = trim($matches[3] ?? '');
                 continue;
             }
 
-            // Parse status line (e.g., "HTTP/1.1 412 Precondition Failed")
-            if (preg_match('/^HTTP\/\d\.\d\s+(\d{3})(\s+(.*))?$/', $line, $matches)) {
-                $result['statusCode'] = (int)$matches[1];
-                $result['statusText'] = trim($matches[3] ?? '');
+            // Skip empty lines
+            if (trim($line) === '') {
                 continue;
             }
 
@@ -242,16 +242,26 @@ class ODataBatchResponse implements IODataResponse
         return $this->body;
     }
 
-    public function getStatus(): ?string
+    public function getStatus(): int
     {
         return $this->httpStatusCode;
     }
 
+    /**
+     * Get the headers of the batch response
+     *
+     * @return array<string, string|array<int, string>>
+     */
     public function getHeaders(): array
     {
         return $this->headers;
     }
 
+    /**
+     * Get all individual responses in the batch
+     *
+     * @return array<int, ODataResponse>
+     */
     public function getResponses(): array
     {
         return $this->responses;
