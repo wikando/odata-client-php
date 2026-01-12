@@ -111,8 +111,7 @@ class ODataBatchResponse implements IODataResponse
                 continue;
             }
 
-            $response = $this->parseIndividualResponse($changesetPart);
-            $responses[] = $response;
+            $responses[] = $this->parseIndividualResponse($changesetPart);
         }
 
         return $responses;
