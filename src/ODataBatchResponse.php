@@ -41,6 +41,12 @@ class ODataBatchResponse implements IODataResponse
         if ($contentType !== null && preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1$/', $contentType, $matches)) {
             return $matches[2];
         }
+
+        if ($contentType === null) {
+            throw new ODataException(
+                'No boundary found in batch response content-type header (content-type header is missing).'
+            );
+        }
         throw new ODataException('No boundary found in batch response content-type header: ' . $contentType);
     }
 
@@ -106,9 +112,7 @@ class ODataBatchResponse implements IODataResponse
             }
 
             $response = $this->parseIndividualResponse($changesetPart);
-            if ($response !== null) {
-                $responses[] = $response;
-            }
+            $responses[] = $response;
         }
 
         return $responses;

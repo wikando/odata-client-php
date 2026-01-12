@@ -350,6 +350,17 @@ JSON;
         new ODataBatchResponse($request, 'body', 200, $headers);
     }
 
+    public function testMissingContentTypeHeaderThrowsException(): void
+    {
+        $this->expectException(ODataException::class);
+        $this->expectExceptionMessage('No boundary found in batch response content-type header (content-type header is missing).');
+
+        $headers = [];
+        $request = $this->createMock(IODataRequest::class);
+
+        new ODataBatchResponse($request, 'body', 200, $headers);
+    }
+
     public function testMissingContentTypeThrowsException(): void
     {
         $this->expectException(ODataException::class);
@@ -385,7 +396,7 @@ EOD;
     public function testLinuxLineEndingsAreSupported(): void
     {
         $boundary = 'batch_unix';
-        $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\nContent-Type: Content-Type: application/json\n\n[]\n--$boundary--";
+        $body = "--$boundary\nContent-Type: application/http\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n[]\n--$boundary--";
 
         $headers = ['Content-Type' => "multipart/mixed; boundary=$boundary"];
         $request = $this->createMock(IODataRequest::class);

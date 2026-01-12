@@ -257,7 +257,7 @@ class ODataRequest implements IODataRequest
             throw new ODataException(Constants::UNABLE_TO_PARSE_RESPONSE);
         }
 
-        if ($response instanceof ODataBatchResponse){
+        if ($response instanceof ODataBatchResponse) {
             return [$response, null];
         }
 

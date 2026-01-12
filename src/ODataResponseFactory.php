@@ -4,13 +4,27 @@ namespace SaintSystems\OData;
 
 class ODataResponseFactory
 {
-    public static function create(IODataRequest $request, string $body, int $statusCode, array $headers = [])
+    /**
+     * Create an OData response instance based on the given request and HTTP response data.
+     *
+     * If the Content-Type header indicates a multipart/mixed batch response, an
+     * {@see ODataBatchResponse} instance is returned; otherwise, a standard
+     * {@see ODataResponse} is created.
+     *
+     * @param IODataRequest $request    The originating OData request associated with this response.
+     * @param string        $body       The raw HTTP response body.
+     * @param int           $statusCode The HTTP status code of the response.
+     * @param array         $headers    The HTTP response headers, keyed by header name.
+     *
+     * @return ODataResponse|ODataBatchResponse
+     */
+    public static function create(IODataRequest $request, string $body, int $statusCode, array $headers = []): IODataResponse
     {
         $contentType = self::getContentType($headers);
 
         if (
             $contentType !== null &&
-            preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1$/', $contentType)
+            preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1/', $contentType)
         ) {
             return new ODataBatchResponse($request, $body, $statusCode, $headers);
         }
