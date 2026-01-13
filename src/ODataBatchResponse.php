@@ -38,7 +38,7 @@ class ODataBatchResponse implements IODataResponse
     private function extractBoundary(): string
     {
         $contentType = $this->getContentTypeHeader();
-        if ($contentType !== null && preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1$/', $contentType, $matches)) {
+        if ($contentType !== null && preg_match('/^multipart\/mixed;\s*boundary=(["\']?)([^"\';]+)\1/', $contentType, $matches)) {
             return $matches[2];
         }
 
