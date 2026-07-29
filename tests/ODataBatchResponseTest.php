@@ -184,6 +184,10 @@ EOD;
         $this->assertSame('[Organization URI]/api/data/v9.2/contacts(66aa66aa-bb77-cc88-dd99-00ee00ee00ee)', $headers2['Location']);
         $this->assertSame('[Organization URI]/api/data/v9.2/contacts(66aa66aa-bb77-cc88-dd99-00ee00ee00ee)', $headers2['OData-EntityId']);
         $this->assertSame('', $response2->getRawBody());
+
+        $this->assertSame($response1, $batchResponse->getResponseByContentId('1'));
+        $this->assertSame($response2, $batchResponse->getResponseByContentId('2'));
+        $this->assertNull($batchResponse->getResponseByContentId('3'));
     }
 
     public function testBatchResponseWithMixedSuccessAndFailure(): void
