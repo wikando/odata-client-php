@@ -274,4 +274,21 @@ class ODataBatchResponse implements IODataResponse
     {
         return $this->responses[$index] ?? null;
     }
+
+    public function getResponseByContentId(string $contentId): ?ODataResponse
+    {
+        foreach ($this->responses as $response) {
+            foreach ($response->getHeaders() as $name => $value) {
+                if (strtolower($name) !== 'content-id') {
+                    continue;
+                }
+
+                if (is_array($value) ? in_array($contentId, $value, true) : $value === $contentId) {
+                    return $response;
+                }
+            }
+        }
+
+        return null;
+    }
 }
