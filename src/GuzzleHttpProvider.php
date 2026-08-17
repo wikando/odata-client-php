@@ -76,6 +76,18 @@ class GuzzleHttpProvider implements IHttpProvider
         $this->extra_options = $options;
     }
 
+    public function executeWithExtraOptions(array $options, callable $callback)
+    {
+        $originalOptions = $this->extra_options;
+        $this->extra_options = array_merge($originalOptions, $options);
+
+        try {
+            return $callback();
+        } finally {
+            $this->extra_options = $originalOptions;
+        }
+    }
+
     /**
     * Executes the HTTP request using Guzzle
     *
